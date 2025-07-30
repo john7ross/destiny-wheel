@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/destiny-wheel/static/css/main.5146c843.css",
+    "main.js": "/destiny-wheel/static/js/main.1f77888d.js",
+    "index.html": "/destiny-wheel/index.html",
+    "main.5146c843.css.map": "/destiny-wheel/static/css/main.5146c843.css.map",
+    "main.1f77888d.js.map": "/destiny-wheel/static/js/main.1f77888d.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.5146c843.css",
+    "static/js/main.1f77888d.js"
+  ]
+}
