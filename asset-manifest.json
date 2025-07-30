@@ -1,13 +1,23 @@
 {
   "files": {
-    "main.css": "/destiny-wheel/static/css/main.5146c843.css",
-    "main.js": "/destiny-wheel/static/js/main.1f77888d.js",
+    "main.css": "/destiny-wheel/static/css/main.89512c39.css",
+    "main.js": "/destiny-wheel/static/js/main.75b977d9.js",
+    "static/media/3.png": "/destiny-wheel/static/media/3.c2cdb55bceeb9cb95d43.png",
+    "static/media/1.png": "/destiny-wheel/static/media/1.7d687a898c52cbf4bdc8.png",
+    "static/media/6.png": "/destiny-wheel/static/media/6.8ef88ccd2c2169a9d9ca.png",
+    "static/media/0.png": "/destiny-wheel/static/media/0.d772cb180970e4a47f89.png",
+    "static/media/7.png": "/destiny-wheel/static/media/7.40e9d492a93aa53e11be.png",
+    "static/media/5.png": "/destiny-wheel/static/media/5.4d89bd23bc247fabc8ab.png",
+    "static/media/4.png": "/destiny-wheel/static/media/4.4023080b6776fc2ff0b6.png",
+    "static/media/2.png": "/destiny-wheel/static/media/2.e252ab552ba2070d8a05.png",
+    "static/media/9.png": "/destiny-wheel/static/media/9.d68e120bc6da1e3f8f59.png",
+    "static/media/8.png": "/destiny-wheel/static/media/8.4bd79ead53f80d34ed7f.png",
     "index.html": "/destiny-wheel/index.html",
-    "main.5146c843.css.map": "/destiny-wheel/static/css/main.5146c843.css.map",
-    "main.1f77888d.js.map": "/destiny-wheel/static/js/main.1f77888d.js.map"
+    "main.89512c39.css.map": "/destiny-wheel/static/css/main.89512c39.css.map",
+    "main.75b977d9.js.map": "/destiny-wheel/static/js/main.75b977d9.js.map"
   },
   "entrypoints": [
-    "static/css/main.5146c843.css",
-    "static/js/main.1f77888d.js"
+    "static/css/main.89512c39.css",
+    "static/js/main.75b977d9.js"
   ]
 }
