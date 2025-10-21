@@ -1,0 +1,2640 @@
+openapi: 3.0.2
+info:
+  version: 20.0.0
+  title: BaaS API компонента partner-wallet-api
+  description: Спецификация публичного API - baas-wallet-api
+servers:
+- url: https://api.yoosoft.ru/v1
+tags:
+- name: Wallet
+  description: Работа с кошельком
+- name: Identification
+  description: Идентификация пользователя
+- name: Sandbox
+  description: Управление на тестовом окружении
+- name: CardsIssuing
+  description: Выпуск банковских карт
+- name: Cards
+  description: Работа с банковскими картами
+paths:
+  /wallets/{id}:
+    get:
+      tags:
+      - Wallet
+      description: "Запрос данных кошелька, включающих информацию о кошельке и открытых счетах"
+      summary: Возвращает основную информацию о кошельке и его счетах
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      responses:
+        "200":
+          description: Успешный ответ метода получения информации по кошельку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /wallets/{id}/phone:
+    post:
+      tags:
+      - Wallet
+      description: "Запрос изменения номера телефона пользователя, ассоциированного с партнером"
+      summary: "Запрос изменения номера телефона пользователя, ассоциированного с партнером"
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: WalletChangePhoneRequest
+              description: Тело запроса для изменения номера телефона пользователя.
+              properties:
+                phone:
+                  allOf:
+                  - $ref: '#/components/schemas/PhoneNumber'
+                  - description: Новый номер телефона пользователя.
+              required:
+              - phone
+      responses:
+        "200":
+          description: Успешный ответ изменения номера телефона пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /wallets/{id}/email:
+    post:
+      tags:
+      - Wallet
+      description: "Изменение адреса почты, связанного с кошельком"
+      summary: "Изменяет адрес почты, связанный с кошельком"
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletChangeEmailRequest'
+      responses:
+        "200":
+          description: Ответ в случае успешного изменения адреса почты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /wallets/{id}/operations:
+    get:
+      tags:
+      - Wallet
+      description: Список операций кошелька
+      summary: Возвращает список операций по кошельку пользователя
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      - in: query
+        name: created_at.gte
+        description: "Фильтр по времени операции: время должно быть больше указанного значения или равно ему («с такого-то момента включительно»). Указывается в формате [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). Пример: ~`created_at.gte=2018-07-18T10:51:18.139Z`\n"
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_at.lte
+        description: "Фильтр по времени операции: время должно быть меньше указанного значения или равно ему («по такой-то момент включительно»). Указывается в формате [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601). Пример: ~`created_at.lte=2018-07-18T10:51:18.139Z`\n"
+        schema:
+          type: string
+          format: date-time
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/NextCursor'
+      responses:
+        "200":
+          description: Успешный ответ на получение списка операций кошелька
+          content:
+            application/json:
+              schema:
+                type: object
+                description: "Список операций. Операции отсортированы по времени создания в порядке убывания (desc). Возможны случаи, когда размер списка операций больше, чем запрашиваемый limit.\n"
+                properties:
+                  type:
+                    type: string
+                    description: "Формат выдачи результатов запроса. Возможное значение: ~`list` (список).\n"
+                    enum:
+                    - list
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WalletOperation'
+                  next_cursor:
+                    $ref: '#/components/schemas/NextCursor'
+                required:
+                - type
+                - items
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /wallets/{id}/chats:
+    post:
+      tags:
+      - Wallet
+      description: "Получение информации, необходимой для открытия Чата с Поддержкой ЮMoney"
+      summary: "Позволяют получить информацию, необходимую для открытия Чата с Поддержкой ЮMoney"
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportChatRequest'
+      responses:
+        "200":
+          description: "Успешный ответ на получение информации, необходимой для открытия Чата с Поддержкой ЮMoney"
+          content:
+            application/json:
+              schema:
+                type: object
+                description: "Ответ на получение информации, необходимой для открытия Чата с Поддержкой ЮMoney\n"
+                properties:
+                  id:
+                    type: string
+                    description: Идентификатор операции
+                  status:
+                    type: string
+                    description: |
+                      Статус выполнения операции:
+                        * succeeded - успешно выполнена
+                        * canceled - произошла ошибка во время выполнения запроса
+                    enum:
+                    - succeeded
+                    - canceled
+                    example: "canceled"
+                  confirmation:
+                    type: object
+                    description: |
+                      Данные для пользовательского подтверждения.
+                    properties:
+                      type:
+                        $ref: '#/components/schemas/ConfirmationType'
+                      confirmation_token:
+                        type: string
+                        description: Токен для безопасного подтверждения на внешней стороне
+                    required:
+                    - type
+                    - confirmation_token
+                required:
+                - id
+                - status
+                - confirmation
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /wallets/{id}/auto_compensation:
+    post:
+      tags:
+      - Wallet
+      summary: Изменение параметров правила автокомпенсации платежа
+      description: |
+        Запрос позволяет изменить параметры автоматической компенсации суммы платежа при совершении расходных операций
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletChangeAutoCompensationRequest'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: |
+                      Запрос не может быть выполнен согласно правилам бизнес-логики.
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - refusal
+                      reason:
+                        $ref: '#/components/schemas/WalletChangeAutoCompensationRefusalReason'
+                    required:
+                    - code
+                    - reason
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /enrollments:
+    post:
+      summary: Инициирование процесса регистрации пользователя
+      description: Запрос позволяет инициировать процесс регистрации пользователя
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      tags:
+      - Enrollment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: EnrollmentRequest
+              description: Тело запроса для регистрации пользователя.
+              properties:
+                partner_user_id:
+                  type: string
+                  description: Внешний идентификатор пользователя
+                confirmation:
+                  type: object
+                  title: EnrollmentConfirmationRequest
+                  properties:
+                    type:
+                      $ref: '#/components/schemas/EnrollmentConfirmationType'
+                  required:
+                  - type
+              required:
+              - confirmation
+              - partner_user_id
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+              example: "{\n  \"id\": \"en-22e12f66-000f-5000-8000-18db351245c7\",\n  \"status: \"succeeded\"\n  \"wallet_id\": \"ar-27065552-001f-5000-8000-082849448fc0\",\n  \"payment_method_id\": \"1da5c87d-0984-50e8-a7f3-8de646dd9ec9\"\n}\n"
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /enrollments/{id}/user-data:
+    post:
+      summary: Передача пользовательских данных для прохождения подтверждения от пользователя
+      description: "Запрос позволяет подтвердить процесс регистрации пользователя, передавая данные, на которые он дал согласие\n"
+      security:
+      - BasicAuth: []
+      tags:
+      - Enrollment
+      parameters:
+      - $ref: '#/components/parameters/IdPathParameter'
+      - $ref: '#/components/parameters/BasicAuthorization'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: UserEnrollmentRequest
+              description: "Тело запроса для подтверждения процесса регистрации пользователя, передавая данные, \nна которые он дал Согласие\n"
+              properties:
+                phone:
+                  $ref: '#/components/schemas/PhoneNumber'
+                email:
+                  $ref: '#/components/schemas/Email'
+              required:
+              - phone
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+              example: "{\n  \"id\": \"en-22e12f66-000f-5000-8000-18db351245c7\",\n  \"status: \"succeeded\"\n  \"wallet_id\": \"ar-27065552-001f-5000-8000-082849448fc0\",\n  \"payment_method_id\": \"1da5c87d-0984-50e8-a7f3-8de646dd9ec9\"\n}\n"
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: |
+                      Запрос не может быть выполнен согласно правилам бизнес-логики.
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - refusal
+                      reason:
+                        $ref: '#/components/schemas/UserEnrollmentRefusalReason'
+                    required:
+                    - code
+                    - reason
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "410":
+          $ref: '#/components/responses/Gone'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /enrollments/{id}:
+    get:
+      summary: |
+        Метод для получения состояния процесса регистрации пользователя
+      description: |
+        Запрос позволяет получить состояние процесса регистрации пользователя
+      security:
+      - BasicAuth: []
+      tags:
+      - Enrollment
+      parameters:
+      - $ref: '#/components/parameters/IdPathParameter'
+      - $ref: '#/components/parameters/BasicAuthorization'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+              example: "{\n  \"id\": \"en-22e12f66-000f-5000-8000-18db351245c7\",\n  \"status: \"succeeded\"\n  \"wallet_id\": \"ar-27065552-001f-5000-8000-082849448fc0\",\n  \"payment_method_id\": \"1da5c87d-0984-50e8-a7f3-8de646dd9ec9\"\n}\n"
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "410":
+          $ref: '#/components/responses/Gone'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /identifications:
+    post:
+      tags:
+      - Identification
+      summary: Запрос на перенаправление пользователя в процесс Идентификации
+      description: Запрос на перенаправление пользователя в процесс Идентификации
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Тело запроса на перенаправление пользователя в процесс Идентификации
+              properties:
+                wallet_id:
+                  $ref: '#/components/schemas/WalletId'
+                type:
+                  $ref: '#/components/schemas/IdentificationType'
+                confirmation:
+                  x-one-of-name: IdentificationConfirmation
+                  description: Сценарий прохождения процесса Идентификации
+                  oneOf:
+                  - $ref: '#/components/schemas/IdentificationConfirmationRedirect'
+                  - $ref: '#/components/schemas/IdentificationConfirmationMobileSdk'
+              required:
+              - wallet_id
+              - type
+              - confirmation
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identification'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /identifications/{id}:
+    get:
+      tags:
+      - Identification
+      summary: Запрос получения состояния процесса Идентификации
+      description: Запрос получения состояния процесса Идентификации
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/IdentificationIdPathParameter'
+      - $ref: '#/components/parameters/BasicAuthorization'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Identification'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /transfers:
+    post:
+      summary: Инициирование запрос перевода для пользователя
+      description: Запрос позволяет инициировать запрос перевода для пользователя
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      tags:
+      - Transfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: TransferRequest
+              description: Тело запроса для запроса перевода пользователя.
+              properties:
+                funds_flow:
+                  x-one-of-name: TransferFundsFlow
+                  description: Данные для осуществления перевода
+                  oneOf:
+                  - $ref: '#/components/schemas/TransferFundsFlowWalletOutbound'
+                  - $ref: '#/components/schemas/TransferFundsFlowWalletInbound'
+                confirmation:
+                  x-one-of-name: TransferConfirmationRequest
+                  description: Данные для пользовательского подтверждения перевода.
+                  oneOf:
+                  - $ref: '#/components/schemas/TransferConfirmationRequestRedirect'
+                  - $ref: '#/components/schemas/TransferConfirmationRequestMobileSdk'
+                metadata:
+                  type: object
+                  description: "Любые дополнительные данные, которые нужны вам для работы (например, ваш внутренний идентификатор заказа). Передаются в виде набора пар «ключ-значение» и возвращаются в ответе. Ограничения: максимум 16 ключей, имя ключа не больше 32 символов, значение ключа не больше 512 символов, тип данных — строка в формате UTF-8.\n"
+                  additionalProperties:
+                    type: string
+                  maxProperties: 16
+              required:
+              - funds_flow
+              - confirmation
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+              example: "{\n  \"id\": \"22e12f66-000f-5000-8000-18db351335c7\",\n  \"status: \"succeeded\"\n}\n"
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /transfers/{id}:
+    get:
+      summary: |
+        Метод для получения состояния запроса перевода пользователя
+      description: |
+        Запрос позволяет получить состояние запроса перевода пользователя
+      security:
+      - BasicAuth: []
+      tags:
+      - Transfer
+      parameters:
+      - $ref: '#/components/parameters/TransferIdPathParameter'
+      - $ref: '#/components/parameters/BasicAuthorization'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transfer'
+              example: "{\n  \"id\": \"22e12f66-000f-5000-8000-13db351245c7\",\n  \"status: \"succeeded\"\n}\n"
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "410":
+          $ref: '#/components/responses/Gone'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /sandbox/wallets:
+    post:
+      summary: Создание тестового кошелька
+      description: Запрос позволяет создать кошелек тестового пользователя
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      tags:
+      - Sandbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: SandboxWalletRequest
+              description: Тело запроса для регистрации тестового пользователя.
+              properties:
+                partner_user_id:
+                  type: string
+                  description: Внешний идентификатор пользователя
+                phone:
+                  $ref: '#/components/schemas/PhoneNumber'
+                email:
+                  $ref: '#/components/schemas/Email'
+              required:
+              - partner_user_id
+              - phone
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxWalletResponse'
+              example: "{\n  \"status: \"succeeded\",\n  \"wallet_id\": \"ar-27065552-001f-5000-8000-082849448fc0\",\n  \"payment_method_id\": \"1da5c87d-0984-50e8-a7f3-8de646dd9ec9\"\n}\n"
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /sandbox/wallets/{id}/topup:
+    post:
+      summary: Пополнения кошелька тестового пользователя
+      description: Запрос позволяет пополнить кошелек тестового пользователя
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      tags:
+      - Sandbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: SandboxTopupRequest
+              description: Тело запроса для пополнения кошелька тестового пользователя.
+              properties:
+                amount:
+                  $ref: '#/components/schemas/MonetaryAmount'
+              required:
+              - amount
+      responses:
+        "200":
+          $ref: '#/components/responses/Empty'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /sandbox/wallets/{id}/identify:
+    post:
+      summary: Создание идентификации тестового пользователя
+      description: Запрос создать идентификацию тестового пользователя
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletId'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      tags:
+      - Sandbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: SandboxIdentificationRequest
+              description: Тело запроса для создания идентификации тестового пользователя.
+              properties:
+                type:
+                  $ref: '#/components/schemas/SandboxIdentificationType'
+              required:
+              - type
+      responses:
+        "200":
+          $ref: '#/components/responses/Empty'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards_issuing:
+    post:
+      tags:
+      - CardsIssuing
+      summary: Инициирование процесса выпуска карты
+      description: "Запрос позволяет инициировать процессы выпуска банковской карту.\nПроцесс может отличаться, в зависимости от типа носителя карты.\n"
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CardIssuingRequest'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardIssuing'
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: |
+                      Запрос не может быть выполнен согласно правилам бизнес-логики.
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - refusal
+                      reason:
+                        $ref: '#/components/schemas/CardIssuingRefusalReason'
+                    required:
+                    - code
+                    - reason
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards_issuing/{id}:
+    get:
+      tags:
+      - CardsIssuing
+      summary: Получение состояния процесса выпуска карты
+      description: Запрос позволяет получить состояние процесса выпуска карты.
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/CardIssuingIdParameter'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardIssuing'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards:
+    get:
+      tags:
+      - Cards
+      summary: Список карт
+      description: |
+        Запрос позволяет получить список банковских карт.
+        В ответе не возвращаются закрытые карты.
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/WalletIdRequestParameter'
+      responses:
+        "200":
+          description: Запрос успешно обработан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardsList'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards/{id}:
+    get:
+      tags:
+      - Cards
+      summary: Информация о карте
+      description: |
+        Запрос позволяет получить информацию о карте.
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/CardIdPathParameter'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards/{id}/suspend:
+    post:
+      tags:
+      - Cards
+      summary: Заблокировать карту
+      description: |
+        Запрос позволяет заблокировать банковскую карту.
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/CardIdPathParameter'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: |
+                      Запрос не может быть выполнен согласно правилам бизнес-логики.
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - refusal
+                      reason:
+                        $ref: '#/components/schemas/SuspendCardRefusalReason'
+                    required:
+                    - code
+                    - reason
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards/{id}/close:
+    post:
+      tags:
+      - Cards
+      summary: Закрыть карту.
+      description: |
+        Запрос позволяет закрыть банковскую карту.
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/CardIdPathParameter'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      responses:
+        "200":
+          description: Запрос успешно обработан.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Card'
+        "400":
+          description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие, неподдерживаемый метод или запрос не может быть выполнен согласно правилам бизнес-логики.\n"
+          content:
+            application/json:
+              schema:
+                type: object
+                oneOf:
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - invalid_request
+                - type: object
+                  allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    description: |
+                      Запрос не может быть выполнен согласно правилам бизнес-логики.
+                    properties:
+                      code:
+                        description: Код ошибки
+                        type: string
+                        enum:
+                        - refusal
+                      reason:
+                        $ref: '#/components/schemas/CloseCardRefusalReason'
+                    required:
+                    - code
+                    - reason
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards/{id}/change_pin:
+    post:
+      tags:
+      - Cards
+      summary: Перенаправить пользователя в процесс изменения PIN-кода
+      description: "Запрос позволяет получить информацию, необходимую для перенаправления пользователя в процесс изменения PIN-кода"
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/CardIdPathParameter'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              description: Запрос на перенаправление пользователя в процесс изменения PIN-кода
+              title: ChangePinRequest
+              type: object
+              properties:
+                confirmation:
+                  type: object
+                  properties:
+                    type:
+                      $ref: '#/components/schemas/ChangePinConfirmationType'
+                  required:
+                  - type
+              required:
+              - confirmation
+      responses:
+        "200":
+          description: Запрос успешно обработан
+          content:
+            application/json:
+              schema:
+                description: Информация для перенаправления пользователя в процесс изменения PIN-кода
+                title: ChangePinResponse
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Идентификатор операции
+                  status:
+                    type: string
+                    description: |
+                      Статус выполнения операции:
+                        * succeeded - успешно выполнена
+                        * canceled - произошла ошибка во время выполнения запроса
+                    enum:
+                    - succeeded
+                    - canceled
+                    example: "canceled"
+                  confirmation:
+                    type: object
+                    description: |
+                      Данные для пользовательского подтверждения.
+                    properties:
+                      type:
+                        $ref: '#/components/schemas/ChangePinConfirmationType'
+                      confirmation_token:
+                        type: string
+                        description: Токен для безопасного подтверждения на внешней стороне
+                    required:
+                    - type
+                    - confirmation_token
+                required:
+                - id
+                - status
+                - confirmation
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+  /cards/{id}/payment_credentials:
+    post:
+      tags:
+      - Cards
+      summary: Перенаправить пользователя в процесс получения приватных карточных данных
+      description: "Запрос позволяет получить информацию, необходимую для перенаправления пользователя в процесс получения приватных карточных данных"
+      security:
+      - BasicAuth: []
+      parameters:
+      - $ref: '#/components/parameters/BasicAuthorization'
+      - $ref: '#/components/parameters/CardIdPathParameter'
+      - $ref: '#/components/parameters/IdempotenceKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              description: Запрос на перенаправление пользователя в процесс получения приватных карточных данных
+              title: GetCardPaymentCredentialsRequest
+              type: object
+              properties:
+                confirmation:
+                  type: object
+                  properties:
+                    type:
+                      $ref: '#/components/schemas/GetCardPaymentCredentialsConfirmationType'
+                  required:
+                  - type
+              required:
+              - confirmation
+      responses:
+        "200":
+          description: Запрос успешно обработан
+          content:
+            application/json:
+              schema:
+                description: Информация для перенаправления пользователя в процесс получения приватных карточных данных
+                title: GetCardPaymentCredentialsResponse
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: Идентификатор операции
+                  status:
+                    type: string
+                    description: |
+                      Статус выполнения операции:
+                        * succeeded - успешно выполнена
+                        * canceled - произошла ошибка во время выполнения запроса
+                    enum:
+                    - succeeded
+                    - canceled
+                    example: "canceled"
+                  confirmation:
+                    type: object
+                    description: |
+                      Данные для пользовательского подтверждения.
+                    properties:
+                      type:
+                        $ref: '#/components/schemas/GetCardPaymentCredentialsConfirmationType'
+                      confirmation_token:
+                        type: string
+                        description: Токен для безопасного подтверждения на внешней стороне
+                    required:
+                    - type
+                    - confirmation_token
+                required:
+                - id
+                - status
+                - confirmation
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/InvalidCredentials'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "429":
+          $ref: '#/components/responses/TooManyRequests'
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: |
+        HTTP Basic аутентификация приложения. Base64-кодированная связка partner_id:partner_password.
+  schemas:
+    EventType:
+      description: "Тип события: * wallet.operation - операция по кошельку\n"
+      type: string
+      enum:
+      - wallet.operation
+    WebhookBase:
+      description: Абстрактный тип уведомления
+      type: object
+      properties:
+        event:
+          $ref: '#/components/schemas/EventType'
+      discriminator:
+        propertyName: event
+        mapping:
+          wallet.operation: '#/components/schemas/WalletOperationWebhook'
+      required:
+      - event
+    WalletOperationWebhook:
+      description: Уведомление об операции по кошельку
+      allOf:
+      - $ref: '#/components/schemas/WebhookBase'
+      type: object
+      properties:
+        type:
+          type: string
+          description: |
+            Тип объекта:
+              * notification - уведомление
+          enum:
+          - notification
+        event:
+          description: Тип события
+          type: string
+          enum:
+          - wallet.operation
+        wallet_id:
+          $ref: '#/components/schemas/WalletId'
+        object:
+          $ref: '#/components/schemas/WalletOperation'
+      required:
+      - type
+      - event
+      - wallet_id
+      - object
+    WalletId:
+      description: "Ссылка на кошелек, созданный для Пользователя Партнера"
+      type: string
+      example: "ar-27065552-001f-5000-8000-082849448fc0"
+    MonetaryAmount:
+      description: Сумма в выбранной валюте.
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+      required:
+      - value
+      - currency
+    Amount:
+      description: Десятичное число с фиксированной точкой в строковом представлении.
+      type: string
+      pattern: "(\\d+\\.\\d{2}|\\d+)"
+      example: "100.00"
+    CurrencyCode:
+      description: "Код валюты, ISO-4217 3-alpha currency symbol."
+      type: string
+      pattern: "[A-Z]{3}"
+      example: "RUB"
+    WalletOperationId:
+      type: string
+      description: Идентификатор операции в кошельке.
+      example: "752323002938854084"
+    WalletOperationType:
+      type: string
+      description: |
+        Тип операции:
+          * payment - Платеж
+          * deposit - Пополнение
+          * transfer - Перевод
+          * currency_exchange - Обмен валюты
+          * cash_withdrawal - Снятие наличных
+      enum:
+      - payment
+      - deposit
+      - transfer
+      - currency_exchange
+      - cash_withdrawal
+    OperationStatus:
+      type: string
+      description: |
+        Статус операции:
+          * succeeded - Операция выполнена успешно
+          * pending - Операция в процессе выполнения
+          * canceled - Операция отменена
+      enum:
+      - succeeded
+      - pending
+      - canceled
+    OperationDirection:
+      type: string
+      description: |
+        Направление движения средств относительно счёта пользователя:
+          * inbound - Приход
+          * outbound - Расход
+      enum:
+      - inbound
+      - outbound
+    AutoCompensation:
+      description: Информация о правиле автоматической компенсации суммы платежа при совершении расходных операций
+      properties:
+        limit:
+          allOf:
+          - $ref: '#/components/schemas/MonetaryAmount'
+          - description: Лимит суммы автокомпенсации
+        spent:
+          allOf:
+          - $ref: '#/components/schemas/MonetaryAmount'
+          - description: Сумма потраченных средств автокомпенсации
+      required:
+      - limit
+      - spent
+    Error:
+      description: Объект ошибки.
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Идентификатор ошибки. Используйте его, если возникла необходимость обратиться в техническую поддержку.\n"
+          example: "ecf255db-cce8-4f15-8fc2-3d7a4678c867"
+        type:
+          type: string
+          description: Тип объекта.
+          enum:
+          - error
+        parameter:
+          type: string
+          description: "Название параметра, из-за которого произошла ошибка."
+          example: "payment_method"
+        retry_after:
+          type: string
+          description: "Рекомендуемое количество миллисекунд, спустя которое следует повторить запрос."
+          example: 1800
+        description:
+          type: string
+          description: Подробное описание ошибки.
+          example: "Invalid API key provided"
+    Wallet:
+      description: Информация о кошельке
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/WalletId'
+        status:
+          $ref: '#/components/schemas/WalletStatus'
+        identification:
+          $ref: '#/components/schemas/WalletIdentification'
+        phone:
+          $ref: '#/components/schemas/PhoneNumber'
+        email:
+          $ref: '#/components/schemas/Email'
+        notifications:
+          type: array
+          description: Нотификации для кошелька
+          items:
+            $ref: '#/components/schemas/NotificationType'
+        accounts:
+          type: array
+          description: Счета текущего кошелька
+          items:
+            type: object
+            title: WalletAccount
+            properties:
+              number:
+                $ref: '#/components/schemas/WalletAccountNumber'
+              balance:
+                $ref: '#/components/schemas/Balance'
+              status:
+                type: string
+                description: |
+                  Состояние счёта:
+                    * active - активен
+                    * suspended - заблокирован
+                    * closed - закрыт
+                enum:
+                - active
+                - suspended
+                - closed
+                example: "active"
+            required:
+            - number
+            - balance
+            - status
+        unread_chat_messages:
+          type: integer
+          format: int32
+          description: Количество непрочитанных сообщений и уведомлений в чате поддержки пользователя. Целое неотрицательное число.
+          minimum: 0
+          example: 5
+        auto_compensation:
+          allOf:
+          - $ref: '#/components/schemas/AutoCompensation'
+          description: "Указывает на сумму расходных операций текущего кошелька, по которым была произведена автокомпенсация с момента последнего изменения лимита"
+      required:
+      - id
+      - status
+      - identification
+      - accounts
+      - notifications
+      - unread_chat_messages
+      - auto_compensation
+    PhoneNumber:
+      description: Номер телефона в формате ITU-T E.164
+      x-sensitive: true
+      type: string
+      pattern: "[0-9]{4,15}"
+      example: "79000000000"
+    WalletChangeEmailRequest:
+      type: object
+      title: ChangeEmailRequest
+      description: "Запрос изменения адреса почты, связанной с кошельком"
+      properties:
+        email:
+          allOf:
+          - $ref: '#/components/schemas/Email'
+          - description: |
+              Новый адрес электронной почты пользователя кошелька в формате RFC 5322
+      required:
+      - email
+    WalletOperation:
+      description: Финансовая операция по кошельку
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/WalletOperationId'
+        title:
+          description: Название операции
+          type: string
+          maxLength: 128
+          example: "Перевод"
+        created_at:
+          description: "Дата-время операции. Указывается в формате [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)"
+          type: string
+          format: date-time
+          example: "2019-03-13T16:09:12.269+03:00"
+        type:
+          $ref: '#/components/schemas/WalletOperationType'
+        status:
+          $ref: '#/components/schemas/OperationStatus'
+        direction:
+          $ref: '#/components/schemas/OperationDirection'
+        amount:
+          allOf:
+          - $ref: '#/components/schemas/MonetaryAmount'
+          - description: "Сумма и валюта операции, с учётом комиссий."
+        currency_amount:
+          allOf:
+          - $ref: '#/components/schemas/MonetaryAmount'
+          - description: "Сумма купленной или проданной валюты в валюте операции.\nВалюта всегда отлична от валюты счета, по которому запрошена история.\nПрисутствует только для операций с типом 'Обмен валюты'\n"
+        merchant_name:
+          type: string
+          description: Наименование Торгово-сервисного предприятия в котором была совершена операция.
+          example: "YOOMONEY"
+        applied_auto_compensation:
+          allOf:
+          - $ref: '#/components/schemas/AutoCompensation'
+          description: "Информация об автоматической компенсации средств по текущей операции. Указывает на сумму средств автокомпенсации, которые были потрачены для этой операции.\n"
+      required:
+      - id
+      - title
+      - created_at
+      - type
+      - status
+      - direction
+      - amount
+    NextCursor:
+      description: "Указатель на следующий фрагмент списка. Обязательный параметр, если размер списка больше размера выдачи (`limit`) и конец выдачи не достигнут."
+      type: string
+      example: "37a5c87d-3984-51e8-a7f3-8de646d39ec15"
+    SupportChatRequest:
+      type: object
+      title: ChatRequest
+      description: "Запрос на получение информации, необходимой для открытия Чата с Поддержкой ЮMoney"
+      properties:
+        type:
+          $ref: '#/components/schemas/ConfirmationType'
+      required:
+      - type
+    ConfirmationType:
+      type: string
+      description: "Тип подтверждения, где Пользователь будет проводить коммуникацию с саппортом:\n  * embedded - Отображение чата в Web интерфейсе Партнера\n  * mobile_sdk - Отображение чата в Мобильном приложении Партнера\n"
+      enum:
+      - embedded
+      - mobile_sdk
+    WalletChangeAutoCompensationRequest:
+      type: object
+      title: ChangeCompensationRequest
+      description: Запрос изменения параметров автокомпенсации
+      properties:
+        limit:
+          allOf:
+          - $ref: '#/components/schemas/MonetaryAmount'
+          - description: Лимит суммы автокомпенсации
+      required:
+      - limit
+    WalletChangeAutoCompensationRefusalReason:
+      type: string
+      description: |
+        Причина отказа в установке параметров правила автокомпенсации
+          * insufficient_identification_level - недостаточный уровень идентификации кошелька
+      enum:
+      - insufficient_identification_level
+    Email:
+      description: Адрес электронной почты пользователя кошелька в формате RFC 5322
+      x-sensitive: true
+      type: string
+      format: email
+      maxLength: 254
+      example: "user@yoomoney.ru"
+    WalletStatus:
+      type: string
+      description: |
+        Состояние кошелька:
+          * active - активен
+          * suspended - заблокирован
+          * closed - закрыт
+      enum:
+      - active
+      - suspended
+      - closed
+      example: "active"
+    WalletIdentification:
+      description: Данные о идентификации кошелька.
+      type: object
+      properties:
+        level:
+          $ref: '#/components/schemas/IdentificationLevel'
+      required:
+      - level
+    NotificationType:
+      type: string
+      description: |
+        Тип нотификации для кошелька:
+        * annual_identification - Уведомление о необходимости пройти ежегодную идентификацию
+      enum:
+      - annual_identification
+      example: "annual_identification"
+    WalletAccountNumber:
+      description: Номер счета кошелька
+      type: string
+      pattern: "[0-9]{5,33}"
+      example: "41003252336787"
+    Balance:
+      type: array
+      description: "Средства, доступные для расходных операций (остаток по счету)"
+      items:
+        $ref: '#/components/schemas/SignedMonetaryAmount'
+    IdentificationLevel:
+      type: string
+      description: |
+        Уровень идентификации кошелька:
+         * anonymous - анонимный кошелёк (кошелёк без идентификации)
+         * simplified - кошелёк с упрощённой идентификацией
+         * identified - кошелёк с полной идентификацией
+      enum:
+      - anonymous
+      - simplified
+      - identified
+      example: "simplified"
+    SignedMonetaryAmount:
+      description: Сумма в выбранной валюте. Может быть отрицательной.
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/SignedAmount'
+        currency:
+          $ref: '#/components/schemas/CurrencyCode'
+      required:
+      - value
+      - currency
+    SignedAmount:
+      description: Десятичное число с фиксированной точкой в строковом представлении. Может быть отрицательным.
+      type: string
+      pattern: "(-)?(\\d+\\.\\d{2}|\\d+)"
+      example: "100.00"
+    EnrollmentConfirmationType:
+      type: string
+      description: |
+        Тип подтверждения:
+        * embedded - Интерфейс ЮMoney встраивается в интерфейс Партнера
+        * mobile_sdk - Интерфейс ЮMoney в Mobile SDK
+      enum:
+      - embedded
+      - mobile_sdk
+    Enrollment:
+      type: object
+      description: "Объект, описывающий состояние процесса посредством указания дальнейшего необходимого действия.\nВремя жизни процесса ограничено. Если пользователь не предпринимает необходимых действий,\nто спустя некоторое время процесс будет прерван и завершен.\n"
+      properties:
+        id:
+          $ref: '#/components/schemas/EnrollmentId'
+        status:
+          description: "Текущее состояние процесса, объясняющее клиенту следующий шаг:\n\n* waiting_for_user_confirmation - требуется подтвердить регистрацию пользователя.\n* waiting_for_user_data - требуется передать пользовательские данные.\n* succeeded - процесс успешно завершен, пользователь создан.\n* canceled - процесс завершен с ошибкой.\n"
+          type: string
+          enum:
+          - waiting_for_user_confirmation
+          - waiting_for_user_data
+          - succeeded
+          - canceled
+        confirmation:
+          x-one-of-name: EnrollmentConfirmation
+          description: Данные для пользовательского подтверждения. Присутствуют в статусе waiting_for_user_confirmation.
+          oneOf:
+          - $ref: '#/components/schemas/EnrollmentConfirmationEmbedded'
+          - $ref: '#/components/schemas/EnrollmentConfirmationMobileSdk'
+        wallet_id:
+          $ref: '#/components/schemas/WalletId'
+        payment_method_id:
+          $ref: '#/components/schemas/PaymentMethodId'
+        cancellation_details:
+          $ref: '#/components/schemas/EnrollmentCancellationDetails'
+      required:
+      - id
+      - status
+    UserEnrollmentRefusalReason:
+      type: string
+      description: |
+        Причины отказа обработки подтверждения процесса регистрации пользователя * already_exists - пользователь с указанными данными уже существует * enrollment_expired - время жизни процесса превышено
+      enum:
+      - already_exists
+      - enrollment_expired
+    EnrollmentId:
+      type: string
+      description: Идентификатор процесса регистрации пользователя
+      example: "en-27065552-001f-5000-8000-082849448fc0"
+    EnrollmentConfirmationEmbedded:
+      allOf:
+      - $ref: '#/components/schemas/EnrollmentConfirmation'
+      type: object
+      description: "Объект, описывающий данные для подтверждения через встроенные средства.\n"
+      properties:
+        type:
+          enum:
+          - embedded
+        confirmation_token:
+          $ref: '#/components/schemas/ConfirmationToken'
+      required:
+      - confirmation_token
+    EnrollmentConfirmationMobileSdk:
+      allOf:
+      - $ref: '#/components/schemas/EnrollmentConfirmation'
+      type: object
+      description: "Объект, описывающий данные для подтверждения через Mobile SDK.\n"
+      properties:
+        type:
+          enum:
+          - mobile_sdk
+        confirmation_token:
+          type: string
+          description: "Токен, который надо отдать sdk для прохождения пользовательского подтверждения\n"
+      required:
+      - confirmation_token
+    PaymentMethodId:
+      description: "Идентификатор %[сохраненного способа оплаты](/developers/payment-acceptance/scenario-extensions/recurring-payments/basics)."
+      type: string
+      example: "1da5c87d-0984-50e8-a7f3-8de646dd9ec9"
+    EnrollmentCancellationDetails:
+      description: |
+        Расшифровка статуса canceled.
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/EnrollmentCancellationReason'
+        party:
+          $ref: '#/components/schemas/EnrollmentCancellationParty'
+    EnrollmentCancellationReason:
+      description: |
+        Причина завершения процесса регистрации пользователя:
+        * enrollment_expired - Процесс завершился по тайм-ауту
+        * fraud_suspect - Сработал запрет правилами антифрода
+        * phone_number_occupied - Номер телефона уже занят
+        * email_occupied - Email уже занят
+        * phone_and_email_occupied - Номер телефона и Email уже заняты
+        * general_decline - причина не детализирована
+      type: string
+      enum:
+      - enrollment_expired
+      - fraud_suspect
+      - phone_number_occupied
+      - email_occupied
+      - phone_and_email_occupied
+      - general_decline
+      example: "enrollment_expired"
+    EnrollmentCancellationParty:
+      description: |
+        Инициатор отмены enrollment
+      type: string
+      enum:
+      - yoo_money
+      example: "yoo_money"
+    EnrollmentConfirmation:
+      type: object
+      description: "Объект, описывающий данные для подтверждения регистрации пользователя.\n"
+      properties:
+        type:
+          $ref: '#/components/schemas/EnrollmentConfirmationType'
+      required:
+      - type
+      discriminator:
+        propertyName: type
+        mapping:
+          embedded: '#/components/schemas/EnrollmentConfirmationEmbedded'
+          mobile_sdk: '#/components/schemas/EnrollmentConfirmationMobileSdk'
+    ConfirmationToken:
+      type: string
+      description: Токен для безопасного подтверждения на внешней стороне
+    IdentificationType:
+      type: string
+      description: |
+        Тип процесса Идентификации пользователя:
+        * simplified — Упрощенная Идентификация
+        * identified — Полная Идентификации
+        * annual — Ежегодная Идентификации
+      enum:
+      - simplified
+      - identified
+      - annual
+    IdentificationConfirmationRedirect:
+      allOf:
+      - $ref: '#/components/schemas/IdentificationConfirmation'
+      type: object
+      description: "Объект, описывающий данные для типа сценария redirect\n"
+      properties:
+        type:
+          enum:
+          - redirect
+        return_url:
+          type: string
+          format: uri
+          description: |
+            URL для перенаправления пользователя по завершении процесса Идентификации
+      required:
+      - type
+      - return_url
+    IdentificationConfirmationMobileSdk:
+      allOf:
+      - $ref: '#/components/schemas/IdentificationConfirmation'
+      type: object
+      description: "Объект, описывающий данные для типа сценария mobile_sdk\n"
+      properties:
+        type:
+          enum:
+          - mobile_sdk
+      required:
+      - type
+    Identification:
+      type: object
+      description: Процесс Идентификации пользователя
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentificationId'
+        type:
+          $ref: '#/components/schemas/IdentificationType'
+        status:
+          type: string
+          description: "Статус процесса Идентификации:\n* pending — Процесс Идентификации выполняется\n* canceled — Процесс Идентификации отменен \n* succeeded — Процесс Идентификации завершен успехом\n"
+          enum:
+          - pending
+          - canceled
+          - succeeded
+        confirmation:
+          x-one-of-name: IdentificationConfirmationData
+          description: Сценарий прохождения процесса Идентификации
+          oneOf:
+          - $ref: '#/components/schemas/IdentificationConfirmationDataRedirect'
+          - $ref: '#/components/schemas/IdentificationConfirmationDataMobileSdk'
+      required:
+      - id
+      - type
+      - status
+    IdentificationId:
+      type: string
+      description: Уникальный идентификатор процесса Идентификации
+    IdentificationConfirmationDataRedirect:
+      allOf:
+      - $ref: '#/components/schemas/IdentificationConfirmationData'
+      type: object
+      description: "Объект, описывающий данные ответа для типа сценария redirect\n"
+      properties:
+        type:
+          enum:
+          - redirect
+        confirmation_url:
+          type: string
+          format: uri
+          description: |
+            URL для перенаправления авторизованного пользователя в процесс Идентификации
+          example: "https://services.yoosoft.ru/partner/landing?token=value"
+          x-sensitive: true
+      required:
+      - type
+      - confirmation_url
+    IdentificationConfirmationDataMobileSdk:
+      allOf:
+      - $ref: '#/components/schemas/IdentificationConfirmationData'
+      type: object
+      description: "Объект, описывающий данные ответа для типа сценария mobile_sdk\n"
+      properties:
+        type:
+          enum:
+          - mobile_sdk
+        confirmation_token:
+          type: string
+          description: "Токен, который нужно передать в SDK для прохождения процесса Идентификации\n"
+          example: "value"
+          x-sensitive: true
+      required:
+      - type
+      - confirmation_token
+    IdentificationConfirmationType:
+      type: string
+      description: |
+        Тип сценария прохождения процесса Идентификации:
+        * redirect — Партнер самостоятельно перенаправляет пользователя на полученный URL
+        * mobile_sdk — Мобильный SDK BaaS
+      enum:
+      - redirect
+      - mobile_sdk
+    IdentificationConfirmation:
+      type: object
+      description: |
+        Сценарий прохождения процесса Идентификации
+      properties:
+        type:
+          $ref: '#/components/schemas/IdentificationConfirmationType'
+      required:
+      - type
+      discriminator:
+        propertyName: type
+        mapping:
+          redirect: '#/components/schemas/IdentificationConfirmationRedirect'
+          mobile_sdk: '#/components/schemas/IdentificationConfirmationMobileSdk'
+    IdentificationConfirmationData:
+      type: object
+      description: |
+        Данные ответа для прохождения процесса Идентификации
+      properties:
+        type:
+          $ref: '#/components/schemas/IdentificationConfirmationType'
+      required:
+      - type
+      discriminator:
+        propertyName: type
+        mapping:
+          redirect: '#/components/schemas/IdentificationConfirmationDataRedirect'
+          mobile_sdk: '#/components/schemas/IdentificationConfirmationDataMobileSdk'
+    TransferFundsFlowWalletOutbound:
+      allOf:
+      - $ref: '#/components/schemas/TransferFundsFlow'
+      type: object
+      description: "Объект, описывающий данные для перевода - вывода с кошелька.\n"
+      properties:
+        type:
+          enum:
+          - wallet_outbound
+        wallet_id:
+          $ref: '#/components/schemas/WalletId'
+      required:
+      - wallet_id
+    TransferFundsFlowWalletInbound:
+      allOf:
+      - $ref: '#/components/schemas/TransferFundsFlow'
+      type: object
+      description: "Объект, описывающий данные для перевода - пополнение кошелька.\n"
+      properties:
+        type:
+          enum:
+          - wallet_inbound
+        wallet_id:
+          $ref: '#/components/schemas/WalletId'
+      required:
+      - wallet_id
+    TransferConfirmationRequestRedirect:
+      allOf:
+      - $ref: '#/components/schemas/TransferConfirmationRequest'
+      type: object
+      description: "Объект, описывающий данные для перевода через самостоятельное перенаправление пользователя партнером.\n"
+      properties:
+        type:
+          enum:
+          - redirect
+        return_url:
+          type: string
+          description: Адрес возврата
+      required:
+      - return_url
+    TransferConfirmationRequestMobileSdk:
+      allOf:
+      - $ref: '#/components/schemas/TransferConfirmationRequest'
+      type: object
+      description: "Объект, описывающий данные для перевода через Mobile SDK.\n"
+      properties:
+        type:
+          enum:
+          - mobile_sdk
+    Transfer:
+      type: object
+      description: "Объект, описывающий состояние запроса перевода.\nВремя жизни процесса ограничено. Если пользователь не предпринимает необходимых действий,\nто спустя некоторое время процесс будет прерван и завершен.\n"
+      properties:
+        id:
+          $ref: '#/components/schemas/TransferId'
+        status:
+          description: "Текущее состояние запроса, объясняющее клиенту следующий шаг:\n\n* pending - процесс перевода ожидает действий пользователя. В этом случае смотри объект в поле confirmation.\n* succeeded - процесс перевода успешно завершен.\n* canceled - процесс перевода завершен с ошибкой.\n"
+          type: string
+          enum:
+          - pending
+          - succeeded
+          - canceled
+        confirmation:
+          x-one-of-name: TransferConfirmation
+          description: Данные для пользовательского подтверждения перевода. Присутствуют в статусе pending
+          oneOf:
+          - $ref: '#/components/schemas/TransferConfirmationRedirect'
+          - $ref: '#/components/schemas/TransferConfirmationMobileSdk'
+        metadata:
+          type: object
+          description: "Любые дополнительные данные, которые нужны вам для работы (например, ваш внутренний идентификатор заказа). Передаются в виде набора пар «ключ-значение» и возвращаются в ответе. Ограничения: максимум 16 ключей, имя ключа не больше 32 символов, значение ключа не больше 512 символов, тип данных — строка в формате UTF-8.\n"
+          additionalProperties:
+            type: string
+          maxProperties: 16
+      required:
+      - id
+      - status
+    TransferConfirmationType:
+      type: string
+      description: |
+        Тип подтверждения:
+        * redirect - Партнер самостоятельно перенаправляет Пользователя на полученный URL
+        * mobile_sdk - Интерфейс ЮMoney в Mobile SDK
+      enum:
+      - redirect
+      - mobile_sdk
+    TransferConfirmationRequest:
+      type: object
+      description: "Объект, описывающий данные запроса для формата подтверждения перевода пользователя.\n"
+      properties:
+        type:
+          $ref: '#/components/schemas/TransferConfirmationType'
+      required:
+      - type
+      discriminator:
+        propertyName: type
+        mapping:
+          redirect: '#/components/schemas/TransferConfirmationRequestRedirect'
+          mobile_sdk: '#/components/schemas/TransferConfirmationRequestMobileSdk'
+    TransferFundsFlowType:
+      type: string
+      description: |
+        Тип подтверждения:
+        * wallet_outbound - Перевод с кошелька пользователя
+        * wallet_inbound - Перевод на кошелёк пользователя
+      enum:
+      - wallet_outbound
+      - wallet_inbound
+    TransferFundsFlow:
+      type: object
+      description: "Объект, описывающий данные запроса транзакции перевода пользователя.\n"
+      properties:
+        type:
+          $ref: '#/components/schemas/TransferFundsFlowType'
+      required:
+      - type
+      discriminator:
+        propertyName: type
+        mapping:
+          wallet_outbound: '#/components/schemas/TransferFundsFlowWalletOutbound'
+          wallet_inbound: '#/components/schemas/TransferFundsFlowWalletInbound'
+    TransferConfirmation:
+      type: object
+      description: "Объект, описывающий данные в ответе для подтверждения перевода пользователя.\n"
+      properties:
+        type:
+          $ref: '#/components/schemas/TransferConfirmationType'
+      required:
+      - type
+      discriminator:
+        propertyName: type
+        mapping:
+          redirect: '#/components/schemas/TransferConfirmationRedirect'
+          mobile_sdk: '#/components/schemas/TransferConfirmationMobileSdk'
+    TransferConfirmationToken:
+      type: string
+      description: Токен для безопасного перевода на внешней стороне
+      example: "https://services.yoosoft.ru/partner/somelanding?token=value"
+      x-sensitive: true
+    TransferId:
+      type: string
+      description: Идентификатор запроса на перевода
+      maxLength: 36
+      example: "27065552-001f-5000-8000-082877748fc0"
+    TransferConfirmationRedirect:
+      allOf:
+      - $ref: '#/components/schemas/TransferConfirmation'
+      type: object
+      description: "Объект, описывающий данные для перевода через встроенные средства.\n"
+      properties:
+        type:
+          enum:
+          - redirect
+        confirmation_url:
+          $ref: '#/components/schemas/TransferConfirmationToken'
+      required:
+      - confirmation_url
+    TransferConfirmationMobileSdk:
+      allOf:
+      - $ref: '#/components/schemas/TransferConfirmation'
+      type: object
+      description: "Объект, описывающий данные для перевода через Mobile SDK.\n"
+      properties:
+        type:
+          enum:
+          - mobile_sdk
+        confirmation_token:
+          $ref: '#/components/schemas/TransferConfirmationToken'
+      required:
+      - confirmation_token
+    SandboxWalletResponse:
+      type: object
+      description: "Объект, описывающий результат регистрации тестового кошелька.\n"
+      properties:
+        status:
+          description: "Текущее состояние процесса, объясняющее клиенту следующий шаг:\n\n* succeeded - процесс успешно завершен, пользователь создан.\n* canceled - процесс завершен с ошибкой.\n"
+          type: string
+          enum:
+          - succeeded
+          - canceled
+        wallet_id:
+          $ref: '#/components/schemas/WalletId'
+        payment_method_id:
+          $ref: '#/components/schemas/PaymentMethodId'
+        cancellation_details:
+          $ref: '#/components/schemas/SandboxWalletCancellationDetails'
+      required:
+      - status
+    ArgumentsSyntaxError:
+      title: ArgumentsSyntaxError
+      description: "Операция с указанными параметрами не может быть совершена:\n* Нарушен синтаксис запроса, запрос невозможно разобрать;\n"
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+          - SyntaxError
+          example: "SyntaxError"
+      required:
+      - type
+    ArgumentsParametersError:
+      title: ArgumentsParametersError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * Параметры запроса отсутствуют или имеют недопустимое значение;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+          - IllegalParameters
+          example: "IllegalParameters"
+        parameterNames:
+          description: "Список наименований и путей параметров, содержащих некорректные значения. Присутствует при type=IllegalParameters."
+          type: array
+          items:
+            type: string
+            example: "amount"
+            description: "Имя параметра включая его полный путь в JSON документе. Поле вложенного объекта указывается через точку. Номер элемента списка указывается в квадратных скобках.\nПримеры:\n\n  * currency\n  * amount.value\n  * options[0].amount.value\n"
+      required:
+      - type
+      - parameterNames
+    ArgumentsHeadersError:
+      title: ArgumentsHeadersError
+      description: |
+        Операция с указанными параметрами не может быть совершена:
+        * HTTP-заголовоки запроса отсутствуют или имеют недопустимое значение;
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+          - IllegalHeaders
+          example: "IllegalHeaders"
+        headerNames:
+          description: "Список наименований заголовков запроса, содержащих некорректные значения. Присутствует при type=IllegalHeaders."
+          type: array
+          items:
+            type: string
+            example: "Authorization"
+      required:
+      - type
+      - headerNames
+    PermissionsError:
+      title: PermissionsError
+      description: "Запрос не может быть выполнен — Клиент не обладает достаточными правами, или состояние учетной записи клиента не позволяет совершить операцию.\n\nКоды ошибок:\n* InvalidScope - Указанная авторизация клиента не обладает достаточными правами для совершения этой операции.\n"
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - InvalidScope
+          example: "InvalidScope"
+      required:
+      - type
+    AuthenticationTokenError:
+      title: AuthenticationTokenError
+      description: |
+        Запрос не может быть выполнен — ошибка аутентификационных данных клиента.
+        * InvalidToken - Отсутствует или недействительна OAuth2 авторизация кошелька.
+      type: object
+      properties:
+        type:
+          description: Код ошибки.
+          type: string
+          enum:
+          - InvalidToken
+          example: "InvalidToken"
+      required:
+      - type
+    SandboxIdentificationType:
+      type: string
+      description: |
+        Тип процесса Идентификации пользователя:
+        * simplified — Упрощенная Идентификация
+        * identified — Полная Идентификации
+      enum:
+      - simplified
+      - identified
+    SandboxWalletCancellationDetails:
+      description: |
+        Расшифровка статуса canceled.
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/SandboxWalletCancellationReason'
+        party:
+          $ref: '#/components/schemas/SandboxWalletCancellationParty'
+    SandboxWalletCancellationReason:
+      description: |
+        Причина завершения процесса регистрации тестового кошелька:
+        * wallet_enrollment_expired - Процесс завершился по тайм-ауту
+        * phone_number_occupied - Номер телефона уже занят
+        * email_occupied - Email уже занят
+        * general_decline - Причина не детализирована
+      type: string
+      enum:
+      - wallet_enrollment_expired
+      - phone_number_occupied
+      - email_occupied
+      - general_decline
+      example: "sandbox_wallet_expired"
+    SandboxWalletCancellationParty:
+      description: |
+        Инициатор отмены регистрации тестового кошелька
+      type: string
+      enum:
+      - yoo_money
+      example: "yoo_money"
+    CardIssuingRequest:
+      description: Запрос выпуска банковской карты.
+      type: object
+      properties:
+        wallet_id:
+          allOf:
+          - $ref: '#/components/schemas/WalletId'
+          - description: "Ссылка на кошелёк, для которого необходимо выпустить карту"
+        media:
+          type: string
+          description: |
+            Тип носителя карты:
+              * virtual - виртуальная карта
+          enum:
+          - virtual
+      required:
+      - wallet_id
+      - media
+    CardIssuing:
+      description: Процесс выпуска карты.
+      title: CardIssue
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/CardIssuingId'
+        status:
+          $ref: '#/components/schemas/CardIssuingStatus'
+        cancellation_reason:
+          $ref: '#/components/schemas/CardIssuingCancellationReason'
+        card_id:
+          $ref: '#/components/schemas/CardId'
+      required:
+      - id
+      - status
+    CardIssuingRefusalReason:
+      type: string
+      description: |
+        Причина отказа в выпуске карты.
+        * limit_exceeded - Уже выпущено максимально разрешенное количество карт к счету.
+      enum:
+      - limit_exceeded
+    CardIssuingId:
+      type: string
+      description: Идентификатор процесса выпуска карты.
+      example: "a488a12c-bec0-4c32-a7d9-8799d0c6b657"
+    CardIssuingStatus:
+      description: |
+        Результат выпуска карты. Возможные значения:
+          * succeeded - выпуск карты завершился успехом.
+          * pending - выпуск карты выполняется.
+          * canceled - выпуск карты завершился неуспехом.
+      type: string
+      enum:
+      - succeeded
+      - pending
+      - canceled
+      example: "succeeded"
+    CardIssuingCancellationReason:
+      type: string
+      description: |
+        Причина отказа в выпуске карты.
+        * general_decline - Причина не детализирована.
+      enum:
+      - general_decline
+    CardId:
+      description: Идентификатор выпущенной банковской карты.
+      type: string
+      maxLength: 24
+      example: "tPAqAKtStNA/fCn7lbwXCA=="
+    CardsList:
+      type: object
+      description: Список карт
+      properties:
+        type:
+          type: string
+          description: "Формат выдачи результатов запроса. Возможное значение: `list` (список).\n"
+          enum:
+          - list
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Card'
+      required:
+      - type
+      - items
+    Card:
+      description: Информация о банковской карте.
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/CardId'
+        status:
+          $ref: '#/components/schemas/CardStatus'
+        last4:
+          description: Последние четыре цифры номера карты.
+          type: string
+          pattern: "[0-9]{4}"
+          example: "5604"
+        expiry:
+          description: Срок действия карты в формате даты ISO-8601 YYYY-MM
+          type: string
+          example: "2018-12"
+        pin_changeable:
+          description: |
+            Наличие возможности установки PIN-кода для карты.
+              * true - можно установить PIN-код
+              * false - нельзя установить PIN-код
+          type: boolean
+          example: true
+      required:
+      - id
+      - status
+      - last4
+      - expiry
+      - pin_changeable
+    SuspendCardRefusalReason:
+      description: "Причина отказа в блокировке карты: * invalid_card_status - карта находится в неподходящем для блокировки статусе. Заблокировать можно только карту в статусе active.\n"
+      type: string
+      enum:
+      - invalid_card_status
+    CloseCardRefusalReason:
+      description: "Причина отказа в закрытии карты: * invalid_card_status - карта находится в неподходящем для закрытия статусе, например, уже закрыта.\n"
+      type: string
+      enum:
+      - invalid_card_status
+    ChangePinConfirmationType:
+      type: string
+      description: "Тип интерфейса, в котором необходимо открыть пользовательский процесс:\n  * embedded - Отображение процесса в Web интерфейсе Партнера\n  * mobile_sdk - Отображение процесса в Мобильном приложении Партнера\n"
+      enum:
+      - embedded
+      - mobile_sdk
+    GetCardPaymentCredentialsConfirmationType:
+      type: string
+      description: "Тип интерфейса, в котором необходимо открыть пользовательский процесс:\n  * embedded - Отображение процесса в Web интерфейсе Партнера\n  * mobile_sdk - Отображение процесса в Мобильном приложении Партнера\n"
+      enum:
+      - embedded
+      - mobile_sdk
+    CardStatus:
+      description: |
+        Текущее состояние карты. Возможные значения:
+        * active - Карта активирована и доступна для платежей.
+        * suspended - Карта заблокирована.
+        * closed - Карта закрыта.
+      type: string
+      enum:
+      - active
+      - suspended
+      - closed
+  parameters:
+    BasicAuthorization:
+      in: header
+      name: Authorization
+      description: "Токен авторизации в формате \"Basic [token]\""
+      required: true
+      schema:
+        type: string
+    WalletId:
+      name: id
+      in: path
+      required: true
+      description: "Ссылка на кошелек, созданный для Пользователя Партнера."
+      schema:
+        $ref: '#/components/schemas/WalletId'
+    IdempotenceKey:
+      name: Idempotence-Key
+      in: header
+      description: Ключ идемпотентности
+      required: true
+      schema:
+        type: string
+        maxLength: 64
+        pattern: "[0-9a-zA-Z+-_.]{1,64}"
+        default: 2e1da982-1bb1-41f0-b9cf-758cc8bcf069
+    Limit:
+      name: limit
+      in: query
+      description: "Размер выдачи результатов запроса — количество объектов, передаваемых в ответе.\nВозможные значения: от 1 до 100. Пример: ~`limit=50`\n<br/>Значение по умолчанию: ~`10`\n"
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    NextCursor:
+      name: cursor
+      in: query
+      description: "Указатель на следующий фрагмент списка. Пример: ~`cursor=37a5c87d-3984-51e8-a7f3-8de646d39ec15` <br/>В качестве указателя необходимо использовать значение параметра `next_cursor`, полученное в ответе на предыдущий запрос. Используется, если в списке больше объектов, чем может поместиться в выдаче (`limit`), и конец выдачи не достигнут. %[Пример использования](/developers/using-api/lists#pagination)\n"
+      schema:
+        type: string
+    IdPathParameter:
+      description: "Идентификатор процесса регистрации пользователя, передаваемый в пути запроса"
+      in: path
+      name: id
+      required: true
+      schema:
+        $ref: '#/components/schemas/EnrollmentId'
+    IdentificationIdPathParameter:
+      description: "Уникальный идентификатор процесса Идентификации, передаваемый в пути запроса"
+      in: path
+      name: id
+      required: true
+      schema:
+        $ref: '#/components/schemas/IdentificationId'
+    TransferIdPathParameter:
+      description: "Идентификатор запроса перевода пользователя, передаваемый в пути запроса"
+      in: path
+      name: id
+      required: true
+      schema:
+        $ref: '#/components/schemas/TransferId'
+    CardIssuingIdParameter:
+      description: Идентификатор процесса выпуска карты.
+      in: path
+      name: id
+      required: true
+      schema:
+        $ref: '#/components/schemas/CardIssuingId'
+    WalletIdRequestParameter:
+      description: "Ссылка на кошелек, созданный для Пользователя Партнера."
+      in: query
+      name: wallet_id
+      required: true
+      schema:
+        $ref: '#/components/schemas/WalletId'
+    CardIdPathParameter:
+      description: Синоним банковской карты.
+      in: path
+      name: id
+      required: true
+      schema:
+        $ref: '#/components/schemas/CardId'
+  responses:
+    BadRequest:
+      description: "Запрос не может быть обработан. Причиной может быть неправильный синтаксис запроса, ошибка в обязательных параметрах запроса, их отсутствие или неподдерживаемый метод.\n"
+      content:
+        application/json:
+          schema:
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/Error'
+            - type: object
+              properties:
+                code:
+                  description: Код ошибки
+                  type: string
+                  enum:
+                  - invalid_request
+    InvalidCredentials:
+      description: В заголовке Authorization указан неверный ключ.
+      content:
+        application/json:
+          schema:
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/Error'
+            - type: object
+              properties:
+                code:
+                  description: Код ошибки
+                  type: string
+                  enum:
+                  - invalid_credentials
+    Forbidden:
+      description: "Секретный ключ указан верно, но не хватает прав для совершения операции."
+      content:
+        application/json:
+          schema:
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/Error'
+            - type: object
+              properties:
+                code:
+                  description: Код ошибки.
+                  type: string
+                  enum:
+                  - forbidden
+    TooManyRequests:
+      description: Слишком много запросов одновременно отправляется в API. Повторите запрос позже.
+      content:
+        application/json:
+          schema:
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/Error'
+            - type: object
+              properties:
+                code:
+                  description: Код ошибки.
+                  type: string
+                  enum:
+                  - too_many_requests
+    InternalServerError:
+      description: Внутренняя ошибка сервера.
+      content:
+        application/json:
+          schema:
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/Error'
+            - type: object
+              properties:
+                code:
+                  description: Код ошибки.
+                  type: string
+                  enum:
+                  - internal_server_error
+    NotFound:
+      description: Сущность не найдена.
+      content:
+        application/json:
+          schema:
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/Error'
+            - type: object
+              properties:
+                code:
+                  description: Код ошибки.
+                  type: string
+                  enum:
+                  - not_found
+    Gone:
+      description: "Сущность была раньше, но была умышленно удалена и теперь недоступна."
+      content:
+        application/json:
+          schema:
+            type: object
+            allOf:
+            - $ref: '#/components/schemas/Error'
+            - type: object
+              properties:
+                code:
+                  description: Код ошибки.
+                  type: string
+                  enum:
+                  - gone
+    Empty:
+      description: |
+        Запрос принят и успешно обработан. Ответ не содерживат результат выполненого запроса
+      content:
+        application/json:
+          schema:
+            type: object
